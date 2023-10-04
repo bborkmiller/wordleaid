@@ -1,35 +1,35 @@
 class WordleAid:
     def __init__(self, output_style="blocks", default_word_list=True):
-        #self.input_style = input_style.lower()
+        # self.input_style = input_style.lower()
         output_style = output_style.lower()
 
         # if self.input_style not in ['alpha', 'blocks']:
         #     raise ValueError("Style parameters must be either 'alpha' or 'blocks'")
-        if output_style not in ['alpha', 'blocks']:
+        if output_style not in ["alpha", "blocks"]:
             raise ValueError("Style parameters must be either 'alpha' or 'blocks'")
-        
-        self.YES = ['Y', '🟩']
-        self.MAYBE = ['?', '🟨']
-        self.NO = ['_',  '⬛', '⬜']
-                
-        if output_style == 'blocks':
-            self.Y_DISPLAY = '🟩'
-            self.M_DISPLAY = '🟨'
-            self.N_DISPLAY = '⬛'
-        elif output_style == 'alpha':
-            self.Y_DISPLAY = 'Y'
-            self.M_DISPLAY = '?'
-            self.N_DISPLAY = '_'
+
+        self.YES = ["Y", "🟩"]
+        self.MAYBE = ["?", "🟨"]
+        self.NO = ["_", "⬛", "⬜"]
+
+        if output_style == "blocks":
+            self.Y_DISPLAY = "🟩"
+            self.M_DISPLAY = "🟨"
+            self.N_DISPLAY = "⬛"
+        elif output_style == "alpha":
+            self.Y_DISPLAY = "Y"
+            self.M_DISPLAY = "?"
+            self.N_DISPLAY = "_"
 
         if default_word_list:
             self.load_word_list()
 
-    def load_word_list(self, f='accepted_words.txt'):
-        with open('accepted_words.txt') as f:
+    def load_word_list(self, f="accepted_words.txt"):
+        with open("accepted_words.txt") as f:
             self.accepted_words = f.read().splitlines()
 
     def compare_words(self, guess, wordle):
-        '''
+        """
         Compares two words according to the Wordle rules and returns the appropriate tilestring
 
         Rules:
@@ -41,9 +41,9 @@ class WordleAid:
                             not 🟩⬛⬛🟨🟨
 
         Accepts two words, returns a string
-        '''
+        """
 
-        tiles = ''
+        tiles = ""
         pairs = list(zip(wordle, guess))
         for w, g in pairs:
             if w == g:
@@ -54,29 +54,29 @@ class WordleAid:
                 tiles += self.N_DISPLAY
 
         return tiles
-    
+
     def find_candidates(self, known_info, wordlist=None):
-        '''
+        """
         Identifies the words in a list of words that are still eligible solutions, given a set
         of known results from past guesses
 
         Accepts a list of tuples with the form (guessed_word, tilestring)
         Returns a list of candidate words
-        '''
+        """
 
         if wordlist is None:
             wordlist = self.accepted_words
 
-        # Get a set of all the green letters that have been found so far so that
+        # Get a list of all the green letters that have been found so far so that
         # we can do a proper check of black tiles. A black tile could mean either
         # a) that letter does not exist in the word b) it does, but in a different
         # (green) square
-        green_letters = set()
+        green_letters = [None] * 5
         for guessed_word, tilestring in known_info:
-            for l, tile in zip(guessed_word, tilestring):
+            for i, (l, tile) in enumerate(zip(guessed_word, tilestring)):
                 if tile in self.YES:
-                    green_letters.add(l)
-        
+                    green_letters[i] = l
+
         candidates = []
         # Loop through the words we want to compare to the known info
         for word in wordlist:
@@ -85,19 +85,28 @@ class WordleAid:
             for guessed_word, tilestring in known_info:
                 # Loop through the letter positions in this word/tilestring
                 for i, tile in enumerate(tilestring):
+                    # Candidate doesn't have a 🟩 letter in the proper position
                     if tile in self.YES and word[i] != guessed_word[i]:
                         qualified = False
                         break
-                    elif tile in self.NO and guessed_word[i] in word and guessed_word[i] not in green_letters:
+                    # Candidate contains a ⬛ letter, unless it's also a 🟩 letter in the right spot
+                    elif (
+                        tile in self.NO
+                        and guessed_word[i] in word
+                        and not (
+                            guessed_word[i] in green_letters
+                            and word[green_letters.index(guessed_word[i])] == guessed_word[i]
+                            and not word[i] == guessed_word[i]
+                        )
+                    ):
                         qualified = False
                         break
-                    elif tile in self.MAYBE:
-                        if guessed_word[i] not in word:
-                            qualified = False
-                            break
-                        elif guessed_word[i] == word[i]:
-                            qualified = False
-                            break
+                    # Candidate does not contain a 🟨 letter, or it's in the same (wrong) spot
+                    elif tile in self.MAYBE and (
+                        guessed_word[i] not in word or guessed_word[i] == word[i]
+                    ):
+                        qualified = False
+                        break
                 # If this word has been disqualified, we can break out of the loop
                 if not qualified:
                     break
