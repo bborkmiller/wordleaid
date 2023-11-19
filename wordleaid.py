@@ -1,10 +1,19 @@
 class WordleAid:
-    def __init__(self, output_style="blocks", default_word_list=True):
-        # self.input_style = input_style.lower()
-        output_style = output_style.lower()
+    """
+    Functions to help solve the Wordle puzzle, without solving it for you.
 
-        # if self.input_style not in ['alpha', 'blocks']:
-        #     raise ValueError("Style parameters must be either 'alpha' or 'blocks'")
+    Attributes
+    ----------
+    output_style : {'blocks', 'alpha'}
+        Sets the output of the `compare_words` function to either colored emoji
+        blocks or text (_?Y)
+
+    default_word_list : {True, False}
+        True (the default) will load the built-in list of accepted Wordle words
+    """
+
+    def __init__(self, output_style="blocks", default_word_list=True):
+        output_style = output_style.lower()
         if output_style not in ["alpha", "blocks"]:
             raise ValueError("Style parameters must be either 'alpha' or 'blocks'")
 
@@ -30,9 +39,9 @@ class WordleAid:
 
     def compare_words(self, guess, wordle):
         """
-        Compares two words according to the Wordle rules and returns the appropriate tilestring
+        Compare two words according to Wordle rules and return the result.
 
-        Rules:
+        Wordle Rules:
             Right letter, right position: 🟩
             Wrong letter: ⬛
             Right letter, wrong position: 🟨
@@ -40,8 +49,25 @@ class WordleAid:
                 ~ For example: SLOSH compared to SHUNT should yield 🟩⬛⬛⬛🟨,
                             not 🟩⬛⬛🟨🟨
 
-        Accepts two words, returns a string
+        Parameters
+        ----------
+        guess : str
+            The "guessed" word.
+        wordle : str
+            The Wordle word. (In reality, the guess and wordle can be in any order)
+
+        Returns
+        -------
+        str
+            The tilestring resulting from the comparison of `guess` and `wordle`.
+            The tilestring's format will depend on the output_style setting of the
+            class.
         """
+
+        if len(guess) != 5 or len(wordle) != 5:
+            raise ValueError(
+                f"`guess` and `wordle` must both be 5-character strings. Received '{guess}' and '{wordle}.'"
+            )
 
         tiles = ""
         pairs = list(zip(wordle, guess))
@@ -57,15 +83,33 @@ class WordleAid:
 
     def find_candidates(self, known_info, wordlist=None):
         """
-        Identifies the words in a list of words that are still eligible solutions, given a set
-        of known results from past guesses
+        Find eligible words, given a set of known information
 
-        Accepts a list of tuples with the form (guessed_word, tilestring)
-        Returns a list of candidate words
+        Identifies the words in a list of words that are still eligible solutions, given a set
+        of known results from past guesses.
+
+        Parameters
+        ----------
+        known_info : list of tuples
+            A list containing one or more comparisons of guessed words to the Wordle,
+            in the format [('word1', 'tilestring1'), ... ('wordn', 'tsn')].
+        wordlist : list of str
+            The list of candidates. By default this will use the built-in list of all
+            the accepted Wordle answers.
+
+        Returns
+        -------
+        list
+            The list of words (if any) that satisfy the provided set of comparisons.
         """
 
         if wordlist is None:
             wordlist = self.accepted_words
+
+        for i in known_info:
+            wd, ts = i
+            if len(wd) !=5 or len(ts) !=5:
+                raise ValueError(f"The known info list can only contain 5 character strings. Received {i}.")
 
         # Get a list of all the green letters that have been found so far so that
         # we can do a proper check of black tiles. A black tile could mean either
@@ -95,7 +139,8 @@ class WordleAid:
                         and guessed_word[i] in word
                         and not (
                             guessed_word[i] in green_letters
-                            and word[green_letters.index(guessed_word[i])] == guessed_word[i]
+                            and word[green_letters.index(guessed_word[i])]
+                            == guessed_word[i]
                             and not word[i] == guessed_word[i]
                         )
                     ):
